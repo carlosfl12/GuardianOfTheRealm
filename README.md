@@ -5,3 +5,6 @@ In a distant land, a kingdom is now facing a dire threat from relentless hordes 
 # Notes
 
 I'm currently researching to find out which system best suits my idea, so changes will be uploaded over the days.
+
+
+This is also to test my skills in unreal engine and c++.
