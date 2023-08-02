@@ -41,7 +41,5 @@ public:
 
 	void SetIsAttacking(bool Value);
 	bool GetIsAttacking() const;
-	void SetIsMovingTowardsTarget(bool Value);
-	bool GetIsMovingTowardsTarget(class AActor* ThisActor, class AActor* Target, float MaxDistance);
 	
 };

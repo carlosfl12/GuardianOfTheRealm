@@ -15,6 +15,8 @@ void UGoblinAnimInstance::UpdateAnimationProperties(float DeltaTime)
     if (Goblin)
     {
         bIsInAir = Goblin->GetCharacterMovement()->IsFalling();
+        bIsMovingTowardsTarget = Goblin->GetIsMovingTowardsTarget();
+        bIsAttacking = Goblin->GetIsAttacking();
 
         if (Goblin->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f)
         {
@@ -41,22 +43,4 @@ void UGoblinAnimInstance::SetIsAttacking(bool Value)
 bool UGoblinAnimInstance::GetIsAttacking() const
 {
     return bIsAttacking;
-}
-
-void UGoblinAnimInstance::SetIsMovingTowardsTarget(bool Value)
-{
-    bIsMovingTowardsTarget = Value;
-}
-
-bool UGoblinAnimInstance::GetIsMovingTowardsTarget(AActor* ThisActor, AActor *Target, float MaxDistance)
-{
-    if (Target)
-    {
-        float Distance = FVector::Distance(ThisActor->GetActorLocation(), Target->GetActorLocation());
-        if (Distance <= MaxDistance)
-        {
-            return true;
-        }
-    }
-    return false;
 }

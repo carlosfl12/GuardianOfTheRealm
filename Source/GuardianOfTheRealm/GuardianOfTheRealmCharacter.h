@@ -44,6 +44,16 @@ class AGuardianOfTheRealmCharacter : public ACharacter
 	/** Mixes animations of Attack and Movement*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	class UAnimMontage* AttackMontage;
+
+	/** Current speed of the character*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
+	float Speed;
+
+	/** Checks if the player is attacking to reproduce it in the animation*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation, meta = (AllowPrivateAccess = "true"))
+	bool bIsAttacking;
+
+	
 public:
 	AGuardianOfTheRealmCharacter();
 	
@@ -56,8 +66,14 @@ protected:
 	/** Called for looking input */
 	void Look(const FInputActionValue& Value);
 
+	FTimerHandle AttackTimerHandle;
+	/** Attack duration to set Is Attacking to false*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float AttackDuration = 1.5f;
+
 	void Attack();
-			
+
+	void EndAttack();
 
 protected:
 	// APawn interface
@@ -71,5 +87,10 @@ public:
 	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 	/** Returns FollowCamera subobject **/
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+
+	FORCEINLINE bool GetIsAttacking() const { return bIsAttacking; }
+	FORCEINLINE void SetIsAttacking(bool Value);
+
+	FORCEINLINE UAnimMontage* GetAttackAnimMontage() const { return AttackMontage; } 
 };
 

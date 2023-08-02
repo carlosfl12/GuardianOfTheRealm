@@ -66,6 +66,11 @@ void AGuardianOfTheRealmCharacter::BeginPlay()
 	}
 }
 
+void AGuardianOfTheRealmCharacter::SetIsAttacking(bool Value)
+{
+    bIsAttacking = Value;
+}
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -130,9 +135,23 @@ void AGuardianOfTheRealmCharacter::Attack()
 {
 	/** Uses the AttackMontage created in the animation BP */
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	if (AnimInstance && AttackMontage)
+	Speed = GetVelocity().Size();
+	if (AnimInstance && AttackMontage && Speed > 0.f)
 	{
+		// If the player is moving, play the attack while moving animation
 		AnimInstance->Montage_Play(AttackMontage);
 		AnimInstance->Montage_JumpToSection(FName("Attack"));
 	}
+	else if (Speed <= 0.f)
+	{
+		// TODO: if the player does this, make the player not moving until is the attack is finished
+		// If the player is not moving, play the attack without moving
+		SetIsAttacking(true);
+		GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &AGuardianOfTheRealmCharacter::EndAttack, AttackDuration, false);
+	}
+}
+
+void AGuardianOfTheRealmCharacter::EndAttack()
+{
+	SetIsAttacking(false);
 }

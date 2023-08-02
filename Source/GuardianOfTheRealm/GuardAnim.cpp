@@ -19,6 +19,10 @@ void UGuardAnim::UpdateAnimationProperties(float DeltaTime)
     {
         bIsInAir = RealmCharacter->GetCharacterMovement()->IsFalling();
 
+        // Get the lateral speed of the character from velocity
+		FVector Velocity{ RealmCharacter->GetVelocity() };
+		Velocity.Z = 0;
+		Speed = Velocity.Size();
         if (RealmCharacter->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f)
         {
             bIsAccelerating = true;
@@ -27,6 +31,8 @@ void UGuardAnim::UpdateAnimationProperties(float DeltaTime)
         {
             bIsAccelerating = false;
         }
+
+        bIsAttacking = RealmCharacter->GetIsAttacking();
     }
 }
 
@@ -36,30 +42,3 @@ void UGuardAnim::NativeInitializeAnimation()
 
 }
 
-void UGuardAnim::SetIsAttacking(bool Value)
-{
-    bIsAttacking = Value;
-}
-
-bool UGuardAnim::GetIsAttacking() const
-{
-    return bIsAttacking;
-}
-
-void UGuardAnim::SetIsMovingTowardsTarget(bool Value)
-{
-    bIsMovingTowardsTarget = Value;
-}
-
-bool UGuardAnim::GetIsMovingTowardsTarget(AActor* ThisActor, AActor *Target, float MaxDistance)
-{
-    if (Target)
-    {
-        float Distance = FVector::Distance(ThisActor->GetActorLocation(), Target->GetActorLocation());
-        if (Distance <= MaxDistance)
-        {
-            return true;
-        }
-    }
-    return false;
-}

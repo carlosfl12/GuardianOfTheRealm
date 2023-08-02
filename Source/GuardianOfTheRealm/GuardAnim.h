@@ -16,8 +16,6 @@ class GUARDIANOFTHEREALM_API UGuardAnim : public UAnimInstance
 
 
 protected:
-
-
 private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	class AGuardianOfTheRealmCharacter* RealmCharacter;
@@ -34,18 +32,14 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement", meta = (AllowPrivateAccess = "true"))
 	float LastMovementOffsetYaw;
 
-	/** Testing if Goblin is attacking*/
+	/** Testing if Guard is attacking*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat", meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Combat", meta = (AllowPrivateAccess = "true"))
 	bool bIsMovingTowardsTarget;
+
 public:
 	UFUNCTION(BlueprintCallable)
 	void UpdateAnimationProperties(float DeltaTime);
 	virtual void NativeInitializeAnimation() override;
-
-	void SetIsAttacking(bool Value);
-	bool GetIsAttacking() const;
-	void SetIsMovingTowardsTarget(bool Value);
-	bool GetIsMovingTowardsTarget(class AActor* ThisActor, class AActor* Target, float MaxDistance);
 };
