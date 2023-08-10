@@ -45,6 +45,17 @@ class AGuardianOfTheRealmCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	class UAnimMontage* AttackMontage;
 
+	/** MaxHealth of the Character*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float MaxHealth;
+
+	/** Current of the Character*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float CurrentHealth;
+
+	/** Damage of the Character*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float Damage;
 	/** Current speed of the character*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
 	float Speed;
@@ -52,6 +63,12 @@ class AGuardianOfTheRealmCharacter : public ACharacter
 	/** Checks if the player is attacking to reproduce it in the animation*/
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
+
+	// TODO: Cant be targeted by the enemy, dead animation.
+	/** If the player is dead, cant be targeted by the enemy and must have an dead animation*/
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Animation, meta = (AllowPrivateAccess = "true"))
+	bool bIsDead;
+
 
 	
 public:
@@ -71,9 +88,19 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	float AttackDuration = 1.5f;
 
+	/** Used for not dealing damage at the begining of the animation */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	bool bCanDealDamage;
+
 	void Attack();
 
-	void EndAttack();
+
+
+	/** Actors where if they are attacked they remain in storage*/
+	TArray<AActor*> AttackHitActors;
+
+	/** Current Weapon*/
+	AActor* Weapon;
 
 protected:
 	// APawn interface
@@ -92,5 +119,18 @@ public:
 	FORCEINLINE void SetIsAttacking(bool Value);
 
 	FORCEINLINE UAnimMontage* GetAttackAnimMontage() const { return AttackMontage; } 
+	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
+	FORCEINLINE float GetDamage() const { return Damage; }
+	FORCEINLINE bool GetIsDead() const { return bIsDead; }
+	FORCEINLINE bool GetCanDealDamage() const { return bCanDealDamage; }
+
+	UFUNCTION(BlueprintCallable)
+	void SetCanDealDamage(bool Value);
+
+	UFUNCTION(BlueprintCallable)
+	void ReceiveDamage(float EnemyDamage);
+
+	UFUNCTION(BlueprintCallable)
+	void EndAttack();
 };
 

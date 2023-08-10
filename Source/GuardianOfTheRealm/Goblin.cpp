@@ -3,18 +3,24 @@
 
 #include "Goblin.h"
 #include "GuardianOfTheRealmCharacter.h"
+#include "Guard.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "GoblinAnimInstance.h"
 
+
 // Sets default values
 AGoblin::AGoblin() :
 	// Combat
+	MaxHealth(100.f),
+	CurrentHealth(100.f),
 	bIsAttacking(false),
+	Damage(30.f),
 	Speed(0),
 	CurrentTarget(nullptr),
 	bIsMovingTowardsTarget(false),
-	CombatState(ECombatState::ECS_Idle)
+	CombatState(ECombatState::ECS_Idle),
+	bIsDead(false)
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
@@ -22,8 +28,7 @@ AGoblin::AGoblin() :
 }
 
 /**
- * TODO: StateMachine
- * Fix enemy cant move while standard attack
+ * TODO: Running State, Refactor, Detect Guard NPC
  * 
 */
 // Called when the game starts or when spawned
@@ -38,6 +43,10 @@ void AGoblin::BeginPlay()
 	{
 		GoblinAnimInstance = Cast<UAnimInstance>(SkeletalMeshComponent->GetAnimInstance());
 	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	Weapon = AttachedActors[0];
 }
 
 
@@ -54,36 +63,52 @@ AGuardianOfTheRealmCharacter* AGoblin::GetRealmCharacter() const
 	return Cast<AGuardianOfTheRealmCharacter>(UGameplayStatics::GetPlayerPawn(this, 0));
 }
 
-AGuardianOfTheRealmCharacter *AGoblin::GetClosestTarget(AActor *Caller) const
+AActor *AGoblin::GetClosestTarget() const
 {
-	/**
-	 * TODO: Make the goblin target the closest target
-	*/
-	TArray<AActor*> FoundActors;
-	UGameplayStatics::GetAllActorsOfClass(Caller->GetWorld(), AGuardianOfTheRealmCharacter::StaticClass(), FoundActors);
+	TArray<AActor*> FoundActors; 
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), FoundActors);
 
-	AGuardianOfTheRealmCharacter* ClosestTarget = nullptr;
+    float ClosestDistanceSquared = DistanceDetection * DistanceDetection;
+    AActor* ClosestTarget = nullptr;
 
-	
-	for (AActor* FoundActor : FoundActors)
-	{
-		// Cast found actor into AGuardianOfTheRealmCharacter
-		float ClosestDistance = MAX_FLT;
-		if (AGuardianOfTheRealmCharacter* GuardianCharacter = Cast<AGuardianOfTheRealmCharacter>(FoundActor))
-		{
-			float Distance = FVector::Distance(FoundActor->GetActorLocation(), Caller->GetActorLocation());
-			UE_LOG(LogTemp, Display, TEXT("Distance: %f"), Distance);
-			if (Distance <= ClosestDistance)
+    for (AActor* FoundActor : FoundActors)
+    {
+		AGoblin* Goblin = Cast<AGoblin>(FoundActor);
+        if (!Goblin)
+        {
+			if (AGuardianOfTheRealmCharacter* GuardianCharacter = Cast<AGuardianOfTheRealmCharacter>(FoundActor))
 			{
-				ClosestDistance = Distance;
-				ClosestTarget = GuardianCharacter;
-				UE_LOG(LogTemp, Display, TEXT("Entro entro entro: %s"), *ClosestTarget->GetActorNameOrLabel());
-			}
+				if (GuardianCharacter->GetIsDead())
+				{
+					continue;
+				}
+				float DistanceSquared = FVector::DistSquared(FoundActor->GetActorLocation(), GetActorLocation());
+				if (DistanceSquared <= ClosestDistanceSquared)
+				{
+					ClosestDistanceSquared = DistanceSquared;
+					ClosestTarget = GuardianCharacter;
+				}
+			}	
 
-		}
-	}
-	return ClosestTarget;
+			else if (AGuard* Guard = Cast<AGuard>(FoundActor))
+			{
+				if (Guard->GetIsDead())
+				{
+					continue;
+				}
+				float DistanceSquared = FVector::DistSquared(FoundActor->GetActorLocation(), GetActorLocation());
+				if (DistanceSquared <= ClosestDistanceSquared)
+				{
+					ClosestDistanceSquared = DistanceSquared;
+					ClosestTarget = Guard;
+				}
+			}
+        }
+    }
+
+    return ClosestTarget;
 }
+
 
 void AGoblin::MoveToPlayer()
 {
@@ -96,18 +121,18 @@ void AGoblin::MoveToPlayer()
 		MoveDirection.Normalize();
 
 		float Distance = FVector::Distance(GetActorLocation(), CurrentTarget->GetActorLocation());
-		if (Distance > StoppingDistance && CombatState == ECombatState::ECS_Moving)
+		if (Distance >= StoppingDistance && CombatState == ECombatState::ECS_Moving)
 		{
+			if (bIsAttacking) return;
 			// Continue moving towards target
 			bIsMovingTowardsTarget = true;
 			AddMovementInput(MoveDirection, .3f);
 		} 
-		else
-		{
-			// No need to continue moving towards target
-			bIsMovingTowardsTarget = false;
-			AddMovementInput(MoveDirection, 0.f);
-		}
+	}
+	else
+	{
+		// No need to continue moving towards target
+		bIsMovingTowardsTarget = false;
 	}
 }
 bool AGoblin::GetIsMovingTowardsTarget(AActor *Target, float MaxDistance)
@@ -124,13 +149,51 @@ bool AGoblin::GetIsMovingTowardsTarget(AActor *Target, float MaxDistance)
 	CombatState = ECombatState::ECS_Idle;
     return false;
 }
+
+void AGoblin::ReceiveDamage(float EnemyDamage)
+{
+	CurrentHealth -= EnemyDamage;
+	if (CurrentHealth <= 0.f)
+	{
+		CurrentHealth = 0;
+		bIsDead = true;
+		CombatState = ECombatState::ECS_Dead;
+		Dead();
+	}
+}
+
 void AGoblin::AttackTarget()
 {
-	/**
-	 * Calls Anim
-	 * Sets attack in true
-	 * Needs to be refactored later
-	*/
+	//Gets all overlapping actors
+	TSet<AActor*> WeaponOverlappingActors;
+	Weapon->GetOverlappingActors(WeaponOverlappingActors);
+	for (AActor* HitActor : WeaponOverlappingActors)
+	{
+		if (HitActor == this)
+		{
+			continue;
+		}
+		FString ActorName = HitActor->GetActorNameOrLabel();
+		if (ActorName.Contains("BP_Projectile_GreenEnergy"))
+		{
+			continue;
+		}
+		if (!AttackHitActors.Contains(HitActor) && Cast<AGuardianOfTheRealmCharacter>(HitActor))
+		{
+			AttackHitActors.Add(HitActor);
+			// Casts into AGuardianOfTheRealmCharacter to receive damage
+			AGuardianOfTheRealmCharacter* Guardian = Cast<AGuardianOfTheRealmCharacter>(HitActor);
+			Guardian->ReceiveDamage(Damage);
+		}
+		else if (!AttackHitActors.Contains(HitActor) && Cast<AGuard>(HitActor))
+		{
+			AttackHitActors.Add(HitActor);
+			// Casts into AGuard to receive damage
+			AGuard* Guard = Cast<AGuard>(HitActor);
+			Guard->ReceiveDamage(Damage);
+		}
+	}
+
 	UGoblinAnimInstance* GoblinAnim = Cast<UGoblinAnimInstance>(GoblinAnimInstance);
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	Speed = GetVelocity().Size();
@@ -144,19 +207,31 @@ void AGoblin::AttackTarget()
 	}
 	else if (Speed <= 0.f)
 	{
+		// If the enemy and the goblin are staying still, it doesnt play the attack montage
 		CombatState = ECombatState::ECS_Attacking;
 		bIsAttacking = true;
-		GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &AGoblin::EndAttack, AttackDuration, false);
-
+		bIsMovingTowardsTarget = false;
 	}
 
 }
 
 void AGoblin::EndAttack()
-{
+{	
+	AttackHitActors.Empty();
+	CurrentTarget = GetClosestTarget();
+	
 	if (CurrentTarget)
 	{
+		// Sets new rotation to the goblin to face the CurrentTarget
+		FRotator LookAtRotation = FRotationMatrix::MakeFromX(CurrentTarget->GetActorLocation() - GetActorLocation()).Rotator();
+		SetActorRotation(LookAtRotation);
+		UE_LOG(LogTemp, Display, TEXT("Attack Ended"));
+		
+		bIsAttacking = false;
+		bIsMovingTowardsTarget = false;
+		//Checks Distance between goblin and CurrentTarget 
 		float Distance = FVector::Distance(GetActorLocation(), CurrentTarget->GetActorLocation());
+
 		if (Distance > AttackRange && Distance < DistanceDetection)
 		{
 			CombatState = ECombatState::ECS_Moving;
@@ -165,6 +240,7 @@ void AGoblin::EndAttack()
 		{
 			CombatState = ECombatState::ECS_Idle;
 		}
+		
 	}
 }
 
@@ -172,17 +248,17 @@ void AGoblin::Idle()
 {
 	bIsAttacking = false;
 	bIsMovingTowardsTarget = false;
-	CurrentTarget = GetClosestTarget(this);
+	CurrentTarget = GetClosestTarget();
 }
 
 void AGoblin::GoblinLogic()
 {
-	CurrentTarget = GetClosestTarget(this);
+	if (CombatState == ECombatState::ECS_Dead) return;
 	if (CurrentTarget)
 	{
-		float DistanceToPlayer = FVector::Distance(GetActorLocation(), CurrentTarget->GetActorLocation());
+		float DistanceToTarget = FVector::Distance(GetActorLocation(), CurrentTarget->GetActorLocation());
 
-		if (DistanceToPlayer <= AttackRange)
+		if (DistanceToTarget <= AttackRange)
 		{
 			AttackTarget();
 		}
@@ -193,9 +269,19 @@ void AGoblin::GoblinLogic()
 	}
 	else
 	{
+		CombatState = ECombatState::ECS_Idle;
+	}
+	
+	if (CombatState == ECombatState::ECS_Idle)
+	{
 		Idle();
 	}
-	UE_LOG(LogTemp, Display, TEXT("Target: %s"), *CurrentTarget->GetActorNameOrLabel());
+}
+
+void AGoblin::Dead()
+{
+	bIsAttacking = false;
+	bIsMovingTowardsTarget = false;
 }
 
 // Called every frame
@@ -203,4 +289,5 @@ void AGoblin::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	GoblinLogic();
+
 }

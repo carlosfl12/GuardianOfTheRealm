@@ -4,19 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "CombatType.h"
 #include "Goblin.generated.h"
-
-UENUM(BlueprintType)
-enum class ECombatState : uint8
-{
-	ECS_Idle UMETA(DisplayName="Idle"),
-	ECS_Attacking UMETA(DisplayName="Attacking"),
-	ECS_Moving UMETA(DisplayName="Moving"),
-	ECS_Running UMETA(DisplayName="Running"),
-
-	ECS_MAX UMETA(DisplayName="DefaultMAX")
-};
-
 
 UCLASS()
 class GUARDIANOFTHEREALM_API AGoblin : public ACharacter
@@ -46,16 +35,18 @@ protected:
 	float DistanceDetection = 500.f;
 
 	UFUNCTION(BlueprintCallable)
-	void AttackTarget();
-	void EndAttack();
+	virtual void AttackTarget();
+	UFUNCTION(BlueprintCallable)
+	virtual void EndAttack();
 
 	void Idle();
 	void GoblinLogic();
+	void Dead();
 
 private:
-	FTimerHandle AttackTimerHandle;
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
-	float AttackDuration = 1.5f;
+	// FTimerHandle AttackTimerHandle;
+	// UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	// float AttackDuration = .03f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
@@ -67,7 +58,7 @@ private:
 	float StoppingDistance;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
-	class AGuardianOfTheRealmCharacter* CurrentTarget;
+	AActor* CurrentTarget; // Change to AActor and then cast into guard or player
 		
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	bool bIsMovingTowardsTarget;
@@ -75,6 +66,28 @@ private:
 	/** Combat State, can only Move if bIsAttacking is false*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
 	ECombatState CombatState;
+
+	/** Max Health of the Goblin*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float MaxHealth;
+	/** Current Health of the Goblin*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float CurrentHealth;
+	/** Base Damage dealt by the goblin*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	float Damage;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	bool bIsDead;
+
+
+	/** Weapon of the goblin*/
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Combat, meta = (AllowPrivateAccess = "true"))
+	AActor* Weapon;
+
+	// Used to stop duplicate hits
+	TArray<AActor*> AttackHitActors;
+
 public:	
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
@@ -82,15 +95,18 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	AGuardianOfTheRealmCharacter* RealmCharacter;
+	class AGuardianOfTheRealmCharacter* RealmCharacter;
 	AGuardianOfTheRealmCharacter* GetRealmCharacter() const;
-	AGuardianOfTheRealmCharacter* GetClosestTarget(AActor* Caller) const;
-
+	AActor* GetClosestTarget() const; // Change it to AActor
 	void MoveToPlayer();
 
 	bool GetIsMovingTowardsTarget(AActor* Target, float MaxDistance);
 
 	FORCEINLINE bool GetIsMovingTowardsTarget() const { return bIsMovingTowardsTarget;}
 	FORCEINLINE bool GetIsAttacking() const { return bIsAttacking; }
+	FORCEINLINE float GetCurrentHealth() const { return CurrentHealth; }
+	FORCEINLINE bool GetIsDead() const { return bIsDead; }
+	void ReceiveDamage(float EnemyDamage);
+
 
 };

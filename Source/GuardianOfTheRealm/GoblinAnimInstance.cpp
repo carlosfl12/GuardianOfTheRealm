@@ -7,7 +7,7 @@
 
 void UGoblinAnimInstance::UpdateAnimationProperties(float DeltaTime)
 {
-    if (Goblin == nullptr)
+    if (Goblin == nullptr && WizardGoblin == nullptr)
     {
         Goblin = Cast<AGoblin>(TryGetPawnOwner());
     }
@@ -17,6 +17,7 @@ void UGoblinAnimInstance::UpdateAnimationProperties(float DeltaTime)
         bIsInAir = Goblin->GetCharacterMovement()->IsFalling();
         bIsMovingTowardsTarget = Goblin->GetIsMovingTowardsTarget();
         bIsAttacking = Goblin->GetIsAttacking();
+        bIsDead = Goblin->GetIsDead();
 
         if (Goblin->GetCharacterMovement()->GetCurrentAcceleration().Size() > 0.f)
         {
@@ -43,4 +44,9 @@ void UGoblinAnimInstance::SetIsAttacking(bool Value)
 bool UGoblinAnimInstance::GetIsAttacking() const
 {
     return bIsAttacking;
+}
+
+void UGoblinAnimInstance::SetWizard(AWizard *Wizard)
+{
+    WizardGoblin = Wizard;
 }

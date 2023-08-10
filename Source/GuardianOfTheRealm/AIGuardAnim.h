@@ -4,20 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
-#include "GoblinAnimInstance.generated.h"
+#include "AIGuardAnim.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class GUARDIANOFTHEREALM_API UGoblinAnimInstance : public UAnimInstance
+class GUARDIANOFTHEREALM_API UAIGuardAnim : public UAnimInstance
 {
 	GENERATED_BODY()
 	private:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Movement, meta = (AllowPrivateAccess = "true"))
-	class AGoblin* Goblin;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = Movement, meta = (AllowPrivateAccess = "true"))
-	class AWizard* WizardGoblin;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Character, meta = (AllowPrivateAccess = "true"))
+	class AGuard* Guard;
 	/** The speed of the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Movement", meta = (AllowPrivateAccess = "true"))
 	float Speed;
@@ -31,7 +29,7 @@ class GUARDIANOFTHEREALM_API UGoblinAnimInstance : public UAnimInstance
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Movement", meta = (AllowPrivateAccess = "true"))
 	float LastMovementOffsetYaw;
 
-	/** Testing if Goblin is attacking*/
+	/** Testing if Guard is attacking*/
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="Combat", meta = (AllowPrivateAccess = "true"))
 	bool bIsAttacking;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Combat", meta = (AllowPrivateAccess = "true"))
@@ -39,6 +37,9 @@ class GUARDIANOFTHEREALM_API UGoblinAnimInstance : public UAnimInstance
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Combat", meta = (AllowPrivateAccess = "true"))
 	bool bIsDead;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category= "Combat", meta = (AllowPrivateAccess = "true"))
+	bool bIsInjured;
 public:
 	UFUNCTION(BlueprintCallable)
 	void UpdateAnimationProperties(float DeltaTime);
@@ -46,6 +47,4 @@ public:
 
 	void SetIsAttacking(bool Value);
 	bool GetIsAttacking() const;
-	void SetWizard(AWizard* Wizard);
-	
 };

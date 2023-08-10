@@ -9,12 +9,19 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "Goblin.h"
 
 
 //////////////////////////////////////////////////////////////////////////
 // AGuardianOfTheRealmCharacter
 
-AGuardianOfTheRealmCharacter::AGuardianOfTheRealmCharacter()
+AGuardianOfTheRealmCharacter::AGuardianOfTheRealmCharacter() :
+	// Stats
+	MaxHealth(100.f),
+	CurrentHealth(100.f),
+	Damage(30.f),
+	bIsDead(false),
+	bCanDealDamage(false)
 {
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -64,11 +71,33 @@ void AGuardianOfTheRealmCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	TArray<AActor*> AttachedActors;
+	GetAttachedActors(AttachedActors);
+	Weapon = AttachedActors[0];
 }
 
 void AGuardianOfTheRealmCharacter::SetIsAttacking(bool Value)
 {
     bIsAttacking = Value;
+}
+
+void AGuardianOfTheRealmCharacter::SetCanDealDamage(bool Value)
+{
+	bCanDealDamage = Value;
+}
+
+void AGuardianOfTheRealmCharacter::ReceiveDamage(float EnemyDamage)
+{
+	if (CurrentHealth <= 0)
+	{
+		CurrentHealth = 0;
+		bIsDead = true;
+	}
+	else
+	{
+		CurrentHealth -= EnemyDamage;
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -133,6 +162,33 @@ void AGuardianOfTheRealmCharacter::Look(const FInputActionValue& Value)
 
 void AGuardianOfTheRealmCharacter::Attack()
 {
+	// if (bIsAttacking) return; 
+	TSet<AActor*> WeaponOverlappingActors;
+	Weapon->GetOverlappingActors(WeaponOverlappingActors);
+
+	for (AActor* HitActor : WeaponOverlappingActors)
+	{
+
+		if (HitActor == this)
+		{
+			continue;
+		}
+		FString ActorName = HitActor->GetActorNameOrLabel();
+		if (ActorName.Contains("BP_Projectile_GreenEnergy"))
+		{
+			continue;
+		}
+		if (!AttackHitActors.Contains(HitActor) && Cast<AGoblin>(HitActor) && bCanDealDamage)
+		{
+			UE_LOG(LogTemp, Display, TEXT("Hitting: %s"), *HitActor->GetActorNameOrLabel());
+			AttackHitActors.Add(HitActor);
+			// Casts into AGuardianOfTheRealmCharacter to receive damage
+			AGoblin* Goblin = Cast<AGoblin>(HitActor);
+			Goblin->ReceiveDamage(Damage);
+			UE_LOG(LogTemp, Display, TEXT("%s Health:  %f"), *Goblin->GetActorNameOrLabel(), Goblin->GetCurrentHealth());
+		}
+	}
+
 	/** Uses the AttackMontage created in the animation BP */
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	Speed = GetVelocity().Size();
@@ -141,17 +197,20 @@ void AGuardianOfTheRealmCharacter::Attack()
 		// If the player is moving, play the attack while moving animation
 		AnimInstance->Montage_Play(AttackMontage);
 		AnimInstance->Montage_JumpToSection(FName("Attack"));
+		// TODO: Player should move forward until the end of the animation
 	}
 	else if (Speed <= 0.f)
 	{
 		// TODO: if the player does this, make the player not moving until is the attack is finished
 		// If the player is not moving, play the attack without moving
 		SetIsAttacking(true);
-		GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &AGuardianOfTheRealmCharacter::EndAttack, AttackDuration, false);
 	}
 }
 
 void AGuardianOfTheRealmCharacter::EndAttack()
 {
 	SetIsAttacking(false);
+	AttackHitActors.Empty();
+	bCanDealDamage = false;
+
 }
